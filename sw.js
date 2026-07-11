@@ -1,4 +1,4 @@
-const CACHE = 'journal-reves-v1';
+const CACHE = 'journal-de-reves-v1';
 
 // Assets to pre-cache on install
 const PRE_CACHE = ['./'];

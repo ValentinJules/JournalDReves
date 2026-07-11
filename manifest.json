@@ -1,36 +1,36 @@
 {
-  "name": "Journal des rêves",
-  "short_name": "Reves",
-  "description": "Journal des reves",
+  "name": "Journal de Rêves",
+  "short_name": "Rêves",
+  "description": "Un carnet pour noter et explorer tes rêves",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#2c1a0e",
-  "theme_color": "#2c1a0e",
+  "background_color": "#14111e",
+  "theme_color": "#14111e",
   "orientation": "portrait",
   "lang": "fr-FR",
-  "categories": ["education"],
+  "categories": ["lifestyle"],
   "icons": [
     {
-      "src": "Icon-192.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "Icon-512.png",
+      "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "Icon-maskable-192.png",
+      "src": "icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "Icon-maskable-512.png",
+      "src": "icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
