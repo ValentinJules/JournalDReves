@@ -1,7 +1,7 @@
 {
-  "name": "Dictionnaire Patois Mellois",
-  "short_name": "Patois",
-  "description": "Dictionnaire sonore du patois mellois",
+  "name": "Journal des rêves",
+  "short_name": "Reves",
+  "description": "Journal des reves",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -12,25 +12,25 @@
   "categories": ["education"],
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "Icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "Icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-maskable-192.png",
+      "src": "Icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-maskable-512.png",
+      "src": "Icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
