@@ -12,27 +12,27 @@
   "categories": ["lifestyle"],
   "icons": [
     {
-      "src": "Icon-192.png",
+      "src": "Icon-192.jpg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpg",
       "purpose": "any"
     },
     {
-      "src": "Icon-512.png",
+      "src": "Icon-512.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpg",
       "purpose": "any"
     },
     {
-      "src": "Icon-maskable-192.png",
+      "src": "Icon-maskable-192.jpg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpg",
       "purpose": "maskable"
     },
     {
-      "src": "Icon-maskable-512.png",
+      "src": "Icon-maskable-512.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpg",
       "purpose": "maskable"
     }
   ],
