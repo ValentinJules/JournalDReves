@@ -773,7 +773,10 @@
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   }
   function isIOS(){
-    return /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+    var ua = navigator.userAgent.toLowerCase();
+    var isAppleTouchUA = /iphone|ipad|ipod/.test(ua);
+    var isIpadMasqueradingAsMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return isAppleTouchUA || isIpadMasqueradingAsMac;
   }
 
   if(!isStandalone()){
