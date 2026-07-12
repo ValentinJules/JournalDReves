@@ -1,38 +1,38 @@
 {
-  "name": "Journal des Rêves",
-  "short_name": "Rêves",
-  "description": "Un carnet pour noter et explorer ses rêves",
+  "name": "Dictionnaire Patois Mellois",
+  "short_name": "Patois",
+  "description": "Dictionnaire sonore du patois mellois",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#14111e",
-  "theme_color": "#14111e",
+  "background_color": "#2c1a0e",
+  "theme_color": "#2c1a0e",
   "orientation": "portrait",
   "lang": "fr-FR",
-  "categories": ["lifestyle"],
+  "categories": ["education"],
   "icons": [
     {
-      "src": "Icon-192.jpg",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/jpg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "Icon-512.jpg",
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/jpg",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "Icon-maskable-192.jpg",
+      "src": "icon-maskable-192.png",
       "sizes": "192x192",
-      "type": "image/jpg",
+      "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "Icon-maskable-512.jpg",
+      "src": "icon-maskable-512.png",
       "sizes": "512x512",
-      "type": "image/jpg",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ],
