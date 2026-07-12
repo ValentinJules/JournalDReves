@@ -156,16 +156,16 @@
     font-family:'Work Sans',sans-serif;font-size:0.74rem;text-transform:uppercase;
     letter-spacing:0.09em;color:var(--mist-dim);margin-bottom:14px;
   }
-  .tag-freq-list{display:flex;flex-direction:column;gap:7px;}
-  .freq-row{
-    display:flex;align-items:center;gap:10px;width:100%;background:none;border:1px solid transparent;
-    border-radius:9px;padding:6px 8px;cursor:pointer;font-family:inherit;color:var(--mist);
-  }
-  .freq-row.active-row{border-color:rgba(203,194,220,0.3);background:rgba(255,255,255,0.05);}
-  .freq-label{width:96px;flex-shrink:0;font-size:0.86rem;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .freq-bar-track{flex:1;height:7px;border-radius:6px;background:rgba(255,255,255,0.07);overflow:hidden;}
-  .freq-bar-fill{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--horizon),var(--ember));}
-  .freq-count{width:22px;text-align:right;font-size:0.82rem;color:var(--mist-dim);flex-shrink:0;}
+  .graph-caption{font-size:0.78rem;color:var(--mist-dim);margin:-8px 0 14px;}
+  .tag-graph-container{width:100%;min-height:320px;}
+  .tag-graph-svg{display:block;overflow:visible;}
+  .graph-edge{stroke:var(--horizon);stroke-opacity:0.55;stroke-linecap:round;}
+  .graph-node{cursor:pointer;}
+  .graph-node-circle{fill:var(--ember);fill-opacity:0.85;stroke:var(--ink);stroke-width:2px;transition:fill-opacity .15s ease;}
+  .graph-node-label{fill:var(--mist);font-family:'Work Sans',sans-serif;font-size:11px;pointer-events:none;text-anchor:middle;}
+  .graph-node:hover .graph-node-circle{fill-opacity:1;}
+  .graph-node.active .graph-node-circle{fill:var(--mist);stroke:var(--ember);stroke-width:2.5px;}
+  .graph-node.active .graph-node-label{fill:var(--ember);font-weight:600;}
 
   .search-row input{
     width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.14);
@@ -328,8 +328,9 @@
     </header>
 
     <div class="explore-section">
-      <p class="eyebrow">Étiquettes les plus fréquentes</p>
-      <div id="tag-freq-list" class="tag-freq-list"></div>
+      <p class="eyebrow">Étiquettes</p>
+      <p class="graph-caption">La taille reflète la fréquence, les traits les rêves en commun</p>
+      <div id="tag-graph" class="tag-graph-container"></div>
     </div>
 
     <div class="explore-section">
@@ -395,6 +396,8 @@
   var tags = DEFAULT_TAGS.slice();
   var selectedTags = new Set();
   var activeFilterTag = null;
+  var graphNodeEls = [];
+  var currentGraphRaf = null;
 
   /* ===================== STORAGE ===================== */
   async function loadData(){
@@ -567,31 +570,232 @@
     }
   });
 
-  /* ===================== EXPLORE ===================== */
-  function renderTagFrequency(){
-    var container = document.getElementById('tag-freq-list');
-    var freq = computeTagFrequency();
-    if(freq.length === 0){
+  /* ===================== EXPLORE : GRAPHE D'ÉTIQUETTES ===================== */
+  function computeCoOccurrence(){
+    var pairs = {};
+    dreams.forEach(function(d){
+      var ts = Array.from(new Set(d.tags || [])).sort();
+      for(var i=0;i<ts.length;i++){
+        for(var j=i+1;j<ts.length;j++){
+          var key = ts[i] + '|||' + ts[j];
+          pairs[key] = (pairs[key] || 0) + 1;
+        }
+      }
+    });
+    return pairs;
+  }
+
+  function buildTagGraph(){
+    var freqEntries = computeTagFrequency();
+    if(freqEntries.length === 0) return null;
+
+    var maxCount = freqEntries[0][1];
+    var minR = 17, maxR = 44;
+
+    var nodes = freqEntries.map(function(entry){
+      var count = entry[1];
+      var r = minR + (maxR - minR) * Math.sqrt(count / maxCount);
+      return { tag: entry[0], count: count, r: r, x:0, y:0, vx:0, vy:0 };
+    });
+
+    var nodeIndex = {};
+    nodes.forEach(function(n,i){ nodeIndex[n.tag] = i; });
+
+    var pairCounts = computeCoOccurrence();
+    var maxWeight = 0;
+    var edges = Object.keys(pairCounts).map(function(key){
+      var parts = key.split('|||');
+      var w = pairCounts[key];
+      if(w > maxWeight) maxWeight = w;
+      return { a: nodeIndex[parts[0]], b: nodeIndex[parts[1]], weight: w };
+    }).filter(function(e){ return e.a !== undefined && e.b !== undefined; });
+
+    return { nodes: nodes, edges: edges, maxWeight: maxWeight };
+  }
+
+  function tickSimulation(state){
+    var nodes = state.nodes, edges = state.edges, alpha = state.alpha;
+
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var a = nodes[i], b = nodes[j];
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var distSq = dx*dx + dy*dy || 0.01;
+        var dist = Math.sqrt(distSq);
+        var minDist = a.r + b.r + 14;
+        var force = (900 / distSq) * alpha;
+        if(dist < minDist) force += (minDist - dist) * 0.6 * alpha;
+        var fx = (dx/dist) * force, fy = (dy/dist) * force;
+        a.vx -= fx; a.vy -= fy;
+        b.vx += fx; b.vy += fy;
+      }
+    }
+
+    edges.forEach(function(e){
+      var a = nodes[e.a], b = nodes[e.b];
+      var dx = b.x - a.x, dy = b.y - a.y;
+      var dist = Math.sqrt(dx*dx + dy*dy) || 0.01;
+      var idealDist = 90 / (1 + e.weight * 0.35);
+      var force = (dist - idealDist) * 0.02 * alpha;
+      var fx = (dx/dist) * force, fy = (dy/dist) * force;
+      a.vx += fx; a.vy += fy;
+      b.vx -= fx; b.vy -= fy;
+    });
+
+    var cx = state.width/2, cy = state.height/2;
+    nodes.forEach(function(n){
+      n.vx += (cx - n.x) * 0.006 * alpha;
+      n.vy += (cy - n.y) * 0.006 * alpha;
+    });
+
+    nodes.forEach(function(n){
+      n.vx *= 0.82; n.vy *= 0.82;
+      n.x += n.vx; n.y += n.vy;
+      n.x = Math.max(n.r+4, Math.min(state.width - n.r - 4, n.x));
+      n.y = Math.max(n.r+4, Math.min(state.height - n.r - 4, n.y));
+    });
+
+    state.alpha *= 0.985;
+  }
+
+  function updateGraphActiveState(){
+    graphNodeEls.forEach(function(item){
+      item.el.classList.toggle('active', activeFilterTag === item.tag);
+    });
+  }
+
+  function renderTagGraph(){
+    if(currentGraphRaf){ cancelAnimationFrame(currentGraphRaf); currentGraphRaf = null; }
+    var container = document.getElementById('tag-graph');
+    container.innerHTML = '';
+    graphNodeEls = [];
+
+    var graph = buildTagGraph();
+    if(!graph || graph.nodes.length === 0){
       container.innerHTML = '<p class="empty-note">Les étiquettes apparaîtront ici après ton premier rêve noté</p>';
       return;
     }
-    var max = freq[0][1];
-    container.innerHTML = '';
-    freq.forEach(function(entry){
-      var tag = entry[0], count = entry[1];
-      var row = document.createElement('button');
-      row.className = 'freq-row' + (activeFilterTag === tag ? ' active-row' : '');
-      row.innerHTML =
-        '<span class="freq-label">' + escapeHtml(tag) + '</span>' +
-        '<span class="freq-bar-track"><span class="freq-bar-fill" style="width:' + (count/max*100) + '%"></span></span>' +
-        '<span class="freq-count">' + count + '</span>';
-      row.addEventListener('click', function(){
-        activeFilterTag = (activeFilterTag === tag) ? null : tag;
-        renderExplore();
-      });
-      container.appendChild(row);
+
+    var width = container.clientWidth || 300;
+    var height = 320;
+    var svgNS = 'http://www.w3.org/2000/svg';
+
+    var svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('height', height);
+    svg.setAttribute('class', 'tag-graph-svg');
+
+    var edgeGroup = document.createElementNS(svgNS, 'g');
+    var nodeGroup = document.createElementNS(svgNS, 'g');
+    svg.appendChild(edgeGroup);
+    svg.appendChild(nodeGroup);
+    container.appendChild(svg);
+
+    var cx = width/2, cy = height/2;
+    var ringR = Math.min(width, height) * 0.32;
+    graph.nodes.forEach(function(n,i){
+      var angle = (i / graph.nodes.length) * Math.PI * 2;
+      n.x = cx + Math.cos(angle) * ringR + (Math.random()-0.5)*10;
+      n.y = cy + Math.sin(angle) * ringR + (Math.random()-0.5)*10;
     });
+
+    var minW = 1.5, maxW = 7;
+    var edgeEls = graph.edges.map(function(e){
+      var line = document.createElementNS(svgNS, 'line');
+      var sw = graph.maxWeight > 0 ? minW + (maxW-minW) * (e.weight/graph.maxWeight) : minW;
+      line.setAttribute('stroke-width', sw.toFixed(2));
+      line.setAttribute('class', 'graph-edge');
+      edgeGroup.appendChild(line);
+      return { el: line, edge: e };
+    });
+
+    graph.nodes.forEach(function(n){
+      var g = document.createElementNS(svgNS, 'g');
+      g.setAttribute('class', 'graph-node' + (activeFilterTag === n.tag ? ' active' : ''));
+
+      var hitArea = document.createElementNS(svgNS, 'circle');
+      hitArea.setAttribute('r', (n.r + 16).toFixed(1));
+      hitArea.setAttribute('fill', 'transparent');
+      hitArea.style.pointerEvents = 'all';
+
+      var circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('r', n.r.toFixed(1));
+      circle.setAttribute('class', 'graph-node-circle');
+
+      var text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('class', 'graph-node-label');
+      text.setAttribute('dy', (n.r + 13).toFixed(1));
+      text.textContent = n.tag;
+
+      g.appendChild(hitArea);
+      g.appendChild(circle);
+      g.appendChild(text);
+      g.addEventListener('click', function(){
+        activeFilterTag = (activeFilterTag === n.tag) ? null : n.tag;
+        updateGraphActiveState();
+        renderDreamList();
+      });
+
+      nodeGroup.appendChild(g);
+      graphNodeEls.push({ el: g, tag: n.tag, node: n });
+    });
+
+    var state = { nodes: graph.nodes, edges: graph.edges, maxWeight: graph.maxWeight, width: width, height: height, alpha: 1 };
+
+    function frame(){
+      tickSimulation(state);
+
+      edgeEls.forEach(function(item){
+        var a = graph.nodes[item.edge.a], b = graph.nodes[item.edge.b];
+        item.el.setAttribute('x1', a.x.toFixed(1));
+        item.el.setAttribute('y1', a.y.toFixed(1));
+        item.el.setAttribute('x2', b.x.toFixed(1));
+        item.el.setAttribute('y2', b.y.toFixed(1));
+      });
+
+      graphNodeEls.forEach(function(item){
+        item.el.setAttribute('transform', 'translate(' + item.node.x.toFixed(1) + ',' + item.node.y.toFixed(1) + ')');
+      });
+
+      if(state.alpha > 0.01){
+        currentGraphRaf = requestAnimationFrame(frame);
+      }else{
+        currentGraphRaf = null;
+      }
+    }
+
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      for(var iter=0; iter<220 && state.alpha>0.01; iter++){ tickSimulation(state); }
+      edgeEls.forEach(function(item){
+        var a = graph.nodes[item.edge.a], b = graph.nodes[item.edge.b];
+        item.el.setAttribute('x1', a.x.toFixed(1));
+        item.el.setAttribute('y1', a.y.toFixed(1));
+        item.el.setAttribute('x2', b.x.toFixed(1));
+        item.el.setAttribute('y2', b.y.toFixed(1));
+      });
+      graphNodeEls.forEach(function(item){
+        item.el.setAttribute('transform', 'translate(' + item.node.x.toFixed(1) + ',' + item.node.y.toFixed(1) + ')');
+      });
+    }else{
+      currentGraphRaf = requestAnimationFrame(frame);
+    }
   }
+
+  function debounce(fn, wait){
+    var t;
+    return function(){
+      clearTimeout(t);
+      var args = arguments;
+      t = setTimeout(function(){ fn.apply(null, args); }, wait);
+    };
+  }
+
+  window.addEventListener('resize', debounce(function(){
+    if(document.getElementById('view-explore').classList.contains('active')){
+      renderTagGraph();
+    }
+  }, 300));
 
   function renderDreamList(){
     var container = document.getElementById('dream-list');
@@ -653,14 +857,15 @@
   }
 
   function renderExplore(){
-    renderTagFrequency();
+    renderTagGraph();
     renderDreamList();
   }
 
   document.getElementById('search-input').addEventListener('input', renderDreamList);
   document.getElementById('clear-filter-btn').addEventListener('click', function(){
     activeFilterTag = null;
-    renderExplore();
+    updateGraphActiveState();
+    renderDreamList();
   });
 
   /* ===================== EXPORT / IMPORT ===================== */
@@ -733,8 +938,8 @@
   document.getElementById('btn-goto-explore').addEventListener('click', function(){
     activeFilterTag = null;
     document.getElementById('search-input').value = '';
-    renderExplore();
     showView('view-explore');
+    renderExplore();
   });
   document.querySelectorAll('[data-goto]').forEach(function(btn){
     btn.addEventListener('click', function(){ showView(btn.dataset.goto); });
